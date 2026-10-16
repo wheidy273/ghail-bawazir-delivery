@@ -16,6 +16,13 @@ class GhailDeliveryApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
+        cardTheme: const CardThemeData(color: Colors.white, elevation: 0),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true, fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+        ),
         colorScheme: ColorScheme.fromSeed(seedColor: brand),
         scaffoldBackgroundColor: softBg,
         fontFamily: null,
@@ -37,18 +44,19 @@ class Shop {
   final double delivery;
   final IconData icon;
   final bool open;
+  final String imageUrl;
 
-  const Shop(this.name, this.type, this.eta, this.delivery, this.icon,
+  const Shop(this.name, this.type, this.eta, this.delivery, this.icon, this.imageUrl,
       {this.open = true});
 }
 
 const shops = <Shop>[
-  Shop('مطاعم ووجبات', 'مطاعم', '25–40 دقيقة', 500, Icons.restaurant),
-  Shop('بقالة الحي', 'بقالة', '20–35 دقيقة', 400, Icons.shopping_basket),
-  Shop('صيدلية غيل', 'صيدلية', '25–45 دقيقة', 500, Icons.local_pharmacy),
-  Shop('حلويات ومخبوزات', 'حلويات', '20–35 دقيقة', 400, Icons.cake),
-  Shop('خضار وفواكه', 'خضار وفواكه', '20–30 دقيقة', 400, Icons.eco),
-  Shop('مياه ومشروبات', 'مشروبات', '15–30 دقيقة', 300, Icons.local_drink),
+  Shop('مطاعم ووجبات', 'مطاعم', '25–40 دقيقة', 500, Icons.restaurant, 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=700&q=75'),
+  Shop('بقالة الحي', 'بقالة', '20–35 دقيقة', 400, Icons.shopping_basket, 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=700&q=75'),
+  Shop('صيدلية غيل', 'صيدلية', '25–45 دقيقة', 500, Icons.local_pharmacy, 'https://images.unsplash.com/photo-1576602976047-174e57a47881?w=700&q=75'),
+  Shop('حلويات ومخبوزات', 'حلويات', '20–35 دقيقة', 400, Icons.cake, 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=700&q=75'),
+  Shop('خضار وفواكه', 'خضار وفواكه', '20–30 دقيقة', 400, Icons.eco, 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=700&q=75'),
+  Shop('مياه ومشروبات', 'مشروبات', '15–30 دقيقة', 300, Icons.local_drink, 'https://images.unsplash.com/photo-1532634896-26909d0d4b48?w=700&q=75'),
 ];
 
 class HomeScreen extends StatefulWidget {
@@ -123,31 +131,41 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: [
         Container(
-          padding: const EdgeInsets.all(20),
+          height: 208,
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF087F5B), Color(0xFF0C9B72)],
-              begin: Alignment.topRight,
-              end: Alignment.bottomLeft,
-            ),
             borderRadius: BorderRadius.circular(24),
+            gradient: const LinearGradient(colors: [Color(0xFF075B43), Color(0xFF0C9B72)]),
           ),
-          child: const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('طلبك يوصل لباب بيتك 🛵',
-                  style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800)),
-              SizedBox(height: 8),
-              Text('محلات غيل باوزير في مكان واحد',
-                  style: TextStyle(color: Colors.white, fontSize: 14)),
-              SizedBox(height: 14),
-              Row(children: [
-                Icon(Icons.payments_outlined, color: Colors.white),
-                SizedBox(width: 7),
-                Text('الدفع نقدًا عند الاستلام', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+          child: Stack(children: [
+            Positioned.fill(
+              child: Image.network(
+                'https://images.unsplash.com/photo-1526367790999-0150786686a2?w=1200&q=75',
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
+            ),
+            Positioned.fill(child: Container(color: const Color(0xCC075B43))),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: .16), borderRadius: BorderRadius.circular(30)),
+                  child: const Text('خدمة محلية لأهل غيل باوزير', style: TextStyle(color: Colors.white, fontSize: 12)),
+                ),
+                const Spacer(),
+                const Text('كل احتياجاتك،\nتوصلك لباب البيت',
+                  style: TextStyle(color: Colors.white, fontSize: 25, height: 1.25, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 8),
+                const Row(children: [
+                  Icon(Icons.bolt, color: Color(0xFFFFD166), size: 18), SizedBox(width: 5),
+                  Text('اطلب من محلات مدينتك بسهولة', style: TextStyle(color: Colors.white, fontSize: 13)),
+                ]),
               ]),
-            ],
-          ),
+            ),
+            const Positioned(left: 14, top: 14, child: Icon(Icons.delivery_dining, color: Colors.white70, size: 38)),
+          ]),
         ),
         const SizedBox(height: 18),
         TextField(
@@ -184,7 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text('محلات مقترحة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-            Text('${filtered.length} أقسام', style: const TextStyle(color: Colors.black54)),
+            Text('${filtered.length} محلات', style: const TextStyle(color: Colors.black54)),
           ],
         ),
         const SizedBox(height: 10),
@@ -214,11 +232,18 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.all(14),
         child: Row(
           children: [
-            Container(
-              width: 58,
-              height: 58,
-              decoration: BoxDecoration(color: const Color(0xFFE2F4EC), borderRadius: BorderRadius.circular(16)),
-              child: Icon(shop.icon, color: brand, size: 29),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(15),
+              child: SizedBox(
+                width: 82, height: 82,
+                child: Image.network(
+                  shop.imageUrl, fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: const Color(0xFFE2F4EC),
+                    child: Icon(shop.icon, color: brand, size: 31),
+                  ),
+                ),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -230,8 +255,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text('${shop.eta}  •  توصيل ${shop.delivery.toStringAsFixed(0)} ريال',
                       style: const TextStyle(fontSize: 12, color: Colors.black54)),
                   const SizedBox(height: 5),
-                  const Text('أضف منتجات هذا المحل بعد تسجيله',
-                      style: TextStyle(fontSize: 12, color: brand)),
+                  Row(children: [
+                    const Icon(Icons.access_time, size: 14, color: brand),
+                    const SizedBox(width: 4),
+                    Text('متاح للطلب التجريبي', style: TextStyle(fontSize: 11, color: shop.open ? brand : Colors.red)),
+                  ]),
                 ],
               ),
             ),
