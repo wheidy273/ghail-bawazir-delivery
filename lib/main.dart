@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 
 void main() => runApp(const GhailDeliveryApp());
 
 const brand = Color(0xFF087F5B);
 const ink = Color(0xFF18212B);
 const softBg = Color(0xFFF5F7F8);
+// Demo bypass is enabled only for debug builds or an explicitly configured preview build.
+const _previewSkipEnabled = bool.fromEnvironment('DEMO_AUTH_BYPASS', defaultValue: false);
+bool get _canSkipLogin => kDebugMode || _previewSkipEnabled;
 
 class GhailDeliveryApp extends StatelessWidget {
   const GhailDeliveryApp({super.key});
@@ -32,9 +36,190 @@ class GhailDeliveryApp extends StatelessWidget {
           centerTitle: false,
         ),
       ),
-      home: const HomeScreen(),
+      home: const StartupGate(),
     );
   }
+}
+
+
+/// Startup flow. Phone verification is intentionally not simulated: it must be
+/// connected to a trusted authentication backend before accounts are real.
+class StartupGate extends StatefulWidget {
+  const StartupGate({super.key});
+  @override
+  State<StartupGate> createState() => _StartupGateState();
+}
+
+class _StartupGateState extends State<StartupGate> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this, duration: const Duration(milliseconds: 1500),
+  )..forward();
+  bool _showLogin = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future<void>.delayed(const Duration(milliseconds: 2300), () {
+      if (mounted) setState(() => _showLogin = true);
+    });
+  }
+
+  @override
+  void dispose() { _controller.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) => Directionality(
+    textDirection: TextDirection.rtl,
+    child: AnimatedSwitcher(
+      duration: const Duration(milliseconds: 500),
+      child: _showLogin ? const PhoneLoginScreen(key: ValueKey('login')) : _splash(),
+    ),
+  );
+
+  Widget _splash() => Scaffold(
+    key: const ValueKey('splash'),
+    body: Container(
+      decoration: const BoxDecoration(gradient: LinearGradient(
+        begin: Alignment.topRight, end: Alignment.bottomLeft,
+        colors: [Color(0xFF064E3B), Color(0xFF087F5B), Color(0xFF13A779)],
+      )),
+      child: SafeArea(child: Center(child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) => Opacity(
+          opacity: _controller.value.clamp(0.0, 1.0),
+          child: Transform.translate(
+            offset: Offset(0, 18 * (1 - _controller.value)),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Container(width: 112, height: 112,
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(34),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: .15), blurRadius: 28, offset: const Offset(0, 12))]),
+                child: const Icon(Icons.delivery_dining_rounded, size: 72, color: brand)),
+              const SizedBox(height: 24),
+              const Text('غيل باوزير توصيل', style: TextStyle(color: Colors.white, fontSize: 29, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 8),
+              const Text('احتياجاتك اليومية… لحد باب بيتك', style: TextStyle(color: Colors.white70, fontSize: 15)),
+              const SizedBox(height: 38),
+              const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white)),
+            ]),
+          ),
+        ),
+      ))),
+    ),
+  );
+}
+
+class PhoneLoginScreen extends StatefulWidget {
+  const PhoneLoginScreen({super.key});
+  @override
+  State<PhoneLoginScreen> createState() => _PhoneLoginScreenState();
+}
+
+class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _phoneController = TextEditingController();
+  bool _busy = false;
+
+  @override
+  void dispose() { _phoneController.dispose(); super.dispose(); }
+
+  void _continue() {
+    if (!_formKey.currentState!.validate()) return;
+    // No OTP is sent yet. Never claim authentication succeeded before backend integration.
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text('واجهة التسجيل جاهزة. سنفعّل إرسال رمز التحقق بعد ربط مزوّد SMS الآمن.'),
+      behavior: SnackBarBehavior.floating,
+    ));
+  }
+
+  void _skipDemo() {
+    if (!_canSkipLogin) return;
+    Navigator.of(context).pushReplacement(MaterialPageRoute<void>(builder: (_) => const HomeScreen()));
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: Colors.white,
+    body: SafeArea(child: LayoutBuilder(builder: (context, constraints) => SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 18),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: constraints.maxHeight - 38),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Align(alignment: Alignment.centerRight, child: Container(
+            width: 54, height: 54,
+            decoration: BoxDecoration(color: const Color(0xFFE5F5EE), borderRadius: BorderRadius.circular(18)),
+            child: const Icon(Icons.delivery_dining_rounded, color: brand, size: 36),
+          )),
+          const SizedBox(height: 25),
+          Container(
+            height: 190,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(25),
+              gradient: const LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft,
+                colors: [Color(0xFF075B43), Color(0xFF13A779)])),
+            child: Stack(children: [
+              Positioned(left: -22, bottom: -45, child: Icon(Icons.circle, size: 190, color: Colors.white.withValues(alpha: .07))),
+              Positioned(left: 20, top: 16, child: Icon(Icons.local_shipping_rounded, size: 74, color: Colors.white.withValues(alpha: .16))),
+              Padding(padding: const EdgeInsets.all(22), child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.end, children: const [
+                Text('أهلًا بك في غيل باوزير', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
+                SizedBox(height: 7),
+                Text('محلات مدينتك واحتياجاتك اليومية، في مكان واحد.', style: TextStyle(color: Colors.white, fontSize: 13, height: 1.5)),
+              ])),
+            ]),
+          ),
+          const SizedBox(height: 27),
+          const Text('ابدأ برقم هاتفك', style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900, color: ink)),
+          const SizedBox(height: 8),
+          const Text('سنستخدم رقمك لتجهيز تسجيل الدخول الآمن ومتابعة طلباتك.', style: TextStyle(color: Colors.black54, height: 1.6)),
+          const SizedBox(height: 22),
+          Form(key: _formKey, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const Text('رقم الهاتف', style: TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              textDirection: TextDirection.ltr,
+              textAlign: TextAlign.left,
+              maxLength: 15,
+              decoration: InputDecoration(
+                counterText: '', hintText: '+967 7XXXXXXXX', prefixIcon: const Icon(Icons.phone_iphone),
+                filled: true, fillColor: const Color(0xFFF5F7F8),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+              ),
+              validator: (value) {
+                final digits = (value ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+                if (digits.length < 9 || digits.length > 15) return 'أدخل رقم هاتف صحيحًا مع مفتاح الدولة';
+                return null;
+              },
+            ),
+            const SizedBox(height: 14),
+            SizedBox(height: 54, child: FilledButton.icon(
+              onPressed: _busy ? null : _continue,
+              icon: const Icon(Icons.arrow_back_rounded),
+              label: const Text('المتابعة برقم الهاتف', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              style: FilledButton.styleFrom(backgroundColor: brand, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+            )),
+          ])),
+          const SizedBox(height: 17),
+          const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Icon(Icons.lock_outline, color: brand, size: 18), SizedBox(width: 8),
+            Expanded(child: Text('نحافظ على خصوصية بياناتك. لن يتم إرسال رمز تحقق حتى يتم ربط خدمة التسجيل الرسمية.', style: TextStyle(fontSize: 12, color: Colors.black54, height: 1.5))),
+          ]),
+          const Spacer(),
+          if (_canSkipLogin) ...[
+            const SizedBox(height: 20),
+            OutlinedButton(onPressed: _skipDemo, style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(48), foregroundColor: brand,
+              side: const BorderSide(color: Color(0xFFB7DCCB)), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+              child: const Text('تخطي مؤقتًا — للمعاينة فقط')),
+            const SizedBox(height: 8),
+            const Text('وضع تجريبي: لا تستخدم بيانات حقيقية للحساب.', textAlign: TextAlign.center, style: TextStyle(fontSize: 11, color: Colors.black45)),
+          ],
+          const SizedBox(height: 16),
+          const Center(child: Text('غيل باوزير • حضرموت', style: TextStyle(color: Colors.black45, fontSize: 12))),
+        ]),
+      ),
+    ))),
+  );
 }
 
 class Shop {

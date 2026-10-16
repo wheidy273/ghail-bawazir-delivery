@@ -38,7 +38,7 @@ jobs:
           fi
 
       - name: Build Flutter Web
-        run: flutter build web --release --base-href "/ghail-bawazir-delivery/"
+        run: flutter build web --release --dart-define=DEMO_AUTH_BYPASS=true --base-href "/ghail-bawazir-delivery/"
 
       - name: Upload web artifact
         uses: actions/upload-pages-artifact@v3
