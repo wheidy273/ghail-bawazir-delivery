@@ -334,6 +334,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String category = 'الكل';
   String query = '';
   final List<CartItem> cart = [];
+  Shop? cartShop;
 
   int get cartCount => cart.fold(0, (sum, item) => sum + item.quantity);
 
@@ -555,58 +556,120 @@ class _HomeScreenState extends State<HomeScreen> {
       useSafeArea: true,
       builder: (sheetContext) => Directionality(
         textDirection: TextDirection.rtl,
-        child: SafeArea(
-          top: false,
-          child: SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(
-              22,
-              8,
-              22,
-              MediaQuery.of(sheetContext).viewInsets.bottom + 24,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  shop.name,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text('الوقت المتوقع: ${shop.eta}'),
-                Text(
-                  'رسوم التوصيل التجريبية: ${shop.delivery.toStringAsFixed(0)} ريال يمني',
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'هذا قسم تجريبي. عند ربط قاعدة البيانات ستظهر المنتجات الحقيقية وأسعارها.',
-                ),
-                const SizedBox(height: 14),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: () {
-                      Navigator.pop(sheetContext);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'سنضيف قائمة المنتجات عند إعداد بيانات المحلات.',
-                          ),
-                        ),
-                      );
-                    },
-                    child: const Text('عرض المنتجات'),
-                  ),
-                ),
-              ],
-            ),
-          ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(shop.name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text('الوقت المتوقع: ${shop.eta}'),
+            Text('رسوم التوصيل التجريبية: ${shop.delivery.toStringAsFixed(0)} ريال يمني'),
+            const SizedBox(height: 14),
+            const Text('منتجات وأسعار تجريبية للمعاينة. الأسعار قابلة للتعديل قبل الإطلاق.'),
+            const SizedBox(height: 14),
+            SizedBox(width: double.infinity, child: FilledButton.icon(
+              onPressed: () {
+                Navigator.pop(sheetContext);
+                _openProducts(shop);
+              },
+              icon: const Icon(Icons.storefront),
+              label: const Text('عرض المنتجات'),
+            )),
+          ]),
         ),
       ),
     );
+  }
+
+  List<DemoProduct> _productsFor(Shop shop) {
+    switch (shop.type) {
+      case 'مطاعم':
+        return const [DemoProduct('وجبة دجاج', 1800, Icons.dinner_dining), DemoProduct('برجر لحم', 1200, Icons.lunch_dining), DemoProduct('بيتزا صغيرة', 1500, Icons.local_pizza), DemoProduct('بطاطس مقلية', 500, Icons.fastfood), DemoProduct('ماء صغير', 150, Icons.water_drop)];
+      case 'بقالة':
+        return const [DemoProduct('أرز 1 كجم', 900, Icons.rice_bowl), DemoProduct('سكر 1 كجم', 700, Icons.inventory_2), DemoProduct('حليب', 500, Icons.local_drink), DemoProduct('بيض (طبق صغير)', 1800, Icons.egg), DemoProduct('زيت طبخ', 1400, Icons.oil_barrel)];
+      case 'صيدلية':
+        return const [DemoProduct('كمامات (علبة)', 1000, Icons.masks), DemoProduct('معقم يدين', 800, Icons.sanitizer), DemoProduct('فيتامينات', 2500, Icons.medication), DemoProduct('شاش طبي', 400, Icons.healing)];
+      case 'حلويات':
+        return const [DemoProduct('كيك قطعة', 500, Icons.cake), DemoProduct('دونات', 400, Icons.bakery_dining), DemoProduct('بسكويت', 300, Icons.cookie), DemoProduct('معمول (علبة)', 1200, Icons.breakfast_dining)];
+      case 'خضار وفواكه':
+        return const [DemoProduct('طماطم 1 كجم', 500, Icons.eco), DemoProduct('بطاطس 1 كجم', 600, Icons.eco), DemoProduct('موز 1 كجم', 900, Icons.eco), DemoProduct('ليمون 1 كجم', 700, Icons.eco)];
+      default:
+        return const [DemoProduct('مياه (كرتون)', 1200, Icons.water_drop), DemoProduct('عصير', 300, Icons.local_drink), DemoProduct('مشروب غازي', 350, Icons.local_drink), DemoProduct('مياه صغيرة', 150, Icons.water_drop)];
+    }
+  }
+
+  void _openProducts(Shop shop) {
+    final products = _productsFor(shop);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (sheetContext) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: StatefulBuilder(builder: (context, refresh) => SizedBox(
+          height: MediaQuery.of(context).size.height * .78,
+          child: Column(children: [
+            Padding(padding: const EdgeInsets.fromLTRB(18, 4, 18, 12), child: Row(children: [
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(shop.name, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.bold)),
+                Text('رسوم التوصيل ${shop.delivery.toStringAsFixed(0)} ريال • ${shop.eta}', style: const TextStyle(color: Colors.black54, fontSize: 12)),
+              ])),
+              IconButton(onPressed: () { Navigator.pop(sheetContext); _openCart(); }, icon: Badge(isLabelVisible: cartCount > 0, label: Text('$cartCount'), child: const Icon(Icons.shopping_bag_outlined))),
+            ])),
+            const Divider(height: 1),
+            Expanded(child: ListView.separated(
+              padding: const EdgeInsets.all(14),
+              itemCount: products.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final product = products[index];
+                final inCart = cart.where((item) => item.name == product.name && item.shopName == shop.name).fold<int>(0, (n, item) => n + item.quantity);
+                return Card(child: ListTile(
+                  leading: CircleAvatar(backgroundColor: const Color(0xFFE2F4EC), child: Icon(product.icon, color: brand)),
+                  title: Text(product.name, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  subtitle: Text('${product.price.toStringAsFixed(0)} ريال يمني${inCart > 0 ? ' • في السلة: $inCart' : ''}'),
+                  trailing: IconButton.filled(onPressed: () => _addProduct(shop, product, refresh), icon: const Icon(Icons.add_shopping_cart)),
+                ));
+              },
+            )),
+            Padding(padding: const EdgeInsets.all(14), child: SizedBox(width: double.infinity, child: FilledButton(
+              onPressed: cart.isEmpty ? null : () { Navigator.pop(sheetContext); _openCart(); },
+              child: Text('عرض السلة ($cartCount)'),
+            ))),
+          ]),
+        )),
+      ),
+    );
+  }
+
+  void _addProduct(Shop shop, DemoProduct product, void Function(void Function()) refresh) {
+    if (cartShop != null && cartShop!.name != shop.name && cart.isNotEmpty) {
+      showDialog<void>(
+        context: context,
+        builder: (dialogContext) => Directionality(textDirection: TextDirection.rtl, child: AlertDialog(
+          title: const Text('السلة من محل آخر'),
+          content: Text('السلة الحالية من ${cartShop!.name}. هل تريد إفراغها والبدء من ${shop.name}؟'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إلغاء')),
+            FilledButton(onPressed: () {
+              setState(() { cart.clear(); cartShop = shop; cart.add(CartItem(product.name, product.price, shopName: shop.name)); });
+              Navigator.pop(dialogContext);
+              refresh(() {});
+            }, child: const Text('إفراغ والبدء')),
+          ],
+        )),
+      );
+      return;
+    }
+    setState(() {
+      cartShop = shop;
+      CartItem? existing;
+      for (final item in cart) { if (item.name == product.name && item.shopName == shop.name) { existing = item; break; } }
+      if (existing != null) { existing.quantity++; }
+      else { cart.add(CartItem(product.name, product.price, shopName: shop.name)); }
+    });
+    refresh(() {});
+    ScaffoldMessenger.of(this.context).showSnackBar(SnackBar(content: Text('أُضيف ${product.name} إلى السلة'), duration: const Duration(milliseconds: 900)));
   }
 
   Widget _ordersBody() {
@@ -670,69 +733,70 @@ class _HomeScreenState extends State<HomeScreen> {
         textDirection: TextDirection.rtl,
         child: Padding(
           padding: EdgeInsets.fromLTRB(20, 8, 20, MediaQuery.of(context).viewInsets.bottom + 24),
-          child: StatefulBuilder(
-            builder: (context, refresh) {
-              final total = cart.fold<double>(0, (sum, item) => sum + item.price * item.quantity);
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('سلة الطلبات', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
-                  if (cart.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 20),
-                      child: Center(child: Text('السلة فارغة حاليًا')),
-                    )
-                  else
-                    ...cart.map((item) => ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(item.name),
-                          subtitle: Text('${item.price.toStringAsFixed(0)} ريال × ${item.quantity}'),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.remove_circle_outline),
-                            onPressed: () {
-                              setState(() => cart.remove(item));
-                              refresh(() {});
-                            },
-                          ),
-                        )),
-                  const Divider(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('الإجمالي التجريبي', style: TextStyle(fontWeight: FontWeight.bold)),
-                      Text('${total.toStringAsFixed(0)} ريال يمني', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: cart.isEmpty
-                          ? null
-                          : () {
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(this.context).showSnackBar(
-                                const SnackBar(content: Text('إرسال الطلب الحقيقي يتطلب إعداد قاعدة البيانات وتسجيل الحساب.')),
-                              );
-                            },
-                      child: const Text('متابعة الطلب (تجريبي)'),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
+          child: StatefulBuilder(builder: (context, refresh) {
+            final subtotal = cart.fold<double>(0, (sum, item) => sum + item.price * item.quantity);
+            final delivery = cart.isEmpty ? 0.0 : (cartShop?.delivery ?? 0.0);
+            return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('سلة الطلبات', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              if (cartShop != null && cart.isNotEmpty) Text('المحل: ${cartShop!.name}', style: const TextStyle(color: Colors.black54)),
+              const SizedBox(height: 12),
+              if (cart.isEmpty)
+                const Padding(padding: EdgeInsets.symmetric(vertical: 20), child: Center(child: Text('السلة فارغة حاليًا')))
+              else
+                ConstrainedBox(constraints: const BoxConstraints(maxHeight: 320), child: ListView(shrinkWrap: true, children: cart.map((item) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(item.name),
+                  subtitle: Text('${item.price.toStringAsFixed(0)} ريال × ${item.quantity}'),
+                  leading: IconButton(icon: const Icon(Icons.remove_circle_outline), onPressed: () {
+                    setState(() { if (item.quantity > 1) { item.quantity--; } else { cart.remove(item); if (cart.isEmpty) cartShop = null; } });
+                    refresh(() {});
+                  }),
+                  trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                    IconButton(icon: const Icon(Icons.add_circle_outline, color: brand), onPressed: () { setState(() => item.quantity++); refresh(() {}); }),
+                    IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red), onPressed: () { setState(() { cart.remove(item); if (cart.isEmpty) cartShop = null; }); refresh(() {}); }),
+                  ]),
+                )).toList())),
+              const Divider(),
+              _moneyRow('قيمة المنتجات', subtotal),
+              _moneyRow('رسوم التوصيل', delivery),
+              const Divider(),
+              _moneyRow('الإجمالي', subtotal + delivery, bold: true),
+              const SizedBox(height: 12),
+              SizedBox(width: double.infinity, child: FilledButton(
+                onPressed: cart.isEmpty ? null : () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(this.context).showSnackBar(const SnackBar(content: Text('السلة تجريبية فقط. إرسال الطلب الحقيقي يحتاج ربط قاعدة البيانات وتسجيل الحساب.')));
+                },
+                child: const Text('متابعة الطلب (تجريبي)'),
+              )),
+            ]);
+          }),
         ),
       ),
     );
   }
+
+  Widget _moneyRow(String label, double amount, {bool bold = false}) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+      Text(label, style: TextStyle(fontWeight: bold ? FontWeight.bold : FontWeight.normal)),
+      Text('${amount.toStringAsFixed(0)} ريال يمني', style: TextStyle(fontWeight: bold ? FontWeight.bold : FontWeight.normal, color: bold ? brand : ink)),
+    ]),
+  );
+
+}
+
+class DemoProduct {
+  final String name;
+  final double price;
+  final IconData icon;
+  const DemoProduct(this.name, this.price, this.icon);
 }
 
 class CartItem {
   final String name;
   final double price;
+  final String shopName;
   int quantity;
-  CartItem(this.name, this.price, {this.quantity = 1});
+  CartItem(this.name, this.price, {required this.shopName, this.quantity = 1});
 }
