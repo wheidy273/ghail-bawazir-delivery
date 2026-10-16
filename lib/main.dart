@@ -1,5 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
+
+
+/// Network images are cached on-device and always have a bundled local fallback.
+class HybridImage extends StatelessWidget {
+  final String url;
+  final BoxFit fit;
+  final String fallbackAsset;
+  final Widget Function(BuildContext, Object, StackTrace?)? errorBuilder;
+  const HybridImage(this.url, {super.key, this.fit = BoxFit.cover, this.fallbackAsset = 'assets/images/fallback_food.png', this.errorBuilder});
+
+  @override
+  Widget build(BuildContext context) => CachedNetworkImage(
+    imageUrl: url,
+    fit: fit,
+    fadeInDuration: const Duration(milliseconds: 180),
+    placeholder: (_, __) => Image.asset(fallbackAsset, fit: fit),
+    errorWidget: (context, _, error) => errorBuilder != null
+      ? errorBuilder!(context, error, null)
+      : Image.asset(fallbackAsset, fit: fit),
+  );
+}
 
 void main() => runApp(const GhailDeliveryApp());
 
@@ -324,10 +346,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           child: Stack(children: [
             Positioned.fill(
-              child: Image.network(
+              child: HybridImage(
                 'https://images.unsplash.com/photo-1526367790999-0150786686a2?w=1200&q=75',
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                fit: BoxFit.cover, fallbackAsset: 'assets/images/hero_delivery.png',
               ),
             ),
             Positioned.fill(child: Container(color: const Color(0xCC075B43))),
@@ -407,6 +428,16 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  String _shopFallbackAsset(Shop shop) {
+    if (shop.type == 'مطاعم') return 'assets/images/fallback_food.png';
+    if (shop.type == 'بقالة') return 'assets/images/fallback_grocery.png';
+    if (shop.type == 'صيدلية') return 'assets/images/fallback_pharmacy.png';
+    if (shop.type == 'حلويات') return 'assets/images/fallback_bakery.png';
+    if (shop.type == 'خضار وفواكه') return 'assets/images/fallback_produce.png';
+    if (shop.type == 'مشروبات') return 'assets/images/fallback_drinks.png';
+    return 'assets/images/fallback_food.png';
+  }
+
   Widget _shopCard(Shop shop) {
     return Card(
       color: Colors.white,
@@ -421,8 +452,9 @@ class _HomeScreenState extends State<HomeScreen> {
               borderRadius: BorderRadius.circular(15),
               child: SizedBox(
                 width: 82, height: 82,
-                child: Image.network(
+                child: HybridImage(
                   shop.imageUrl, fit: BoxFit.cover,
+                  fallbackAsset: _shopFallbackAsset(shop),
                   errorBuilder: (_, __, ___) => Container(
                     color: const Color(0xFFE2F4EC),
                     child: Icon(shop.icon, color: brand, size: 31),
