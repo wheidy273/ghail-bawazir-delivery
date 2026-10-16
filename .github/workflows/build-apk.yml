@@ -39,19 +39,33 @@ jobs:
             flutter create --platforms=android .
           fi
 
-      - name: Verify Android internet permission
+      - name: Ensure Android internet permission
         run: |
-          MANIFEST=android/app/src/main/AndroidManifest.xml
-          if [ ! -f "$MANIFEST" ]; then
-            echo "ERROR: AndroidManifest.xml was not generated"
-            exit 1
-          fi
-          if ! grep -q 'android.permission.INTERNET' "$MANIFEST"; then
-            echo "ERROR: INTERNET permission missing from AndroidManifest.xml"
-            cat "$MANIFEST"
-            exit 1
-          fi
-          echo "Android INTERNET permission found"
+          python3 - <<'PYTHON'
+          from pathlib import Path
+
+          p = Path("android/app/src/main/AndroidManifest.xml")
+          if not p.exists():
+              raise SystemExit(f"Missing manifest: {p}")
+
+          s = p.read_text()
+          permission = 'android.permission.INTERNET'
+
+          if permission not in s:
+              marker = '<manifest'
+              start = s.find(marker)
+              end = s.find('>', start)
+              if start < 0 or end < 0:
+                  raise SystemExit("Cannot find manifest opening tag")
+
+              s = s[:end + 1] + '\\n    <uses-permission android:name="android.permission.INTERNET" />' + s[end + 1:]
+              p.write_text(s)
+
+          if permission not in p.read_text():
+              raise SystemExit("Failed to add INTERNET permission")
+
+          print("Android INTERNET permission is present.")
+          PYTHON
 
       - name: Get dependencies
         run: flutter pub get
