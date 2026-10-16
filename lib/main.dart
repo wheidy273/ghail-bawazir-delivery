@@ -1,26 +1,84 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 
 
 /// Network images are cached on-device and always have a bundled local fallback.
+/// Hybrid image rendering: online photos stay enabled, local assets are fallbacks.
+/// Web uses Image.network directly; native platforms retain CachedNetworkImage caching.
 class HybridImage extends StatelessWidget {
   final String url;
   final BoxFit fit;
   final String fallbackAsset;
   final Widget Function(BuildContext, Object, StackTrace?)? errorBuilder;
-  const HybridImage(this.url, {super.key, this.fit = BoxFit.cover, this.fallbackAsset = 'assets/images/fallback_food.png', this.errorBuilder});
+
+  const HybridImage(
+    this.url, {
+    super.key,
+    this.fit = BoxFit.cover,
+    this.fallbackAsset = 'assets/images/fallback_food.png',
+    this.errorBuilder,
+  });
+
+  Widget _fallback(BuildContext context, Object error, StackTrace? stack) {
+    if (errorBuilder != null) return errorBuilder!(context, error, stack);
+    return Image.asset(
+      fallbackAsset,
+      fit: fit,
+      width: double.infinity,
+      height: double.infinity,
+      errorBuilder: (_, __, ___) => const ColoredBox(
+        color: Color(0xFFE2F4EC),
+        child: Center(
+          child: Icon(
+            Icons.image_not_supported_outlined,
+            color: Color(0xFF087F5B),
+            size: 32,
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
-  Widget build(BuildContext context) => CachedNetworkImage(
-    imageUrl: url,
-    fit: fit,
-    fadeInDuration: const Duration(milliseconds: 180),
-    placeholder: (_, __) => Image.asset(fallbackAsset, fit: fit),
-    errorWidget: (context, _, error) => errorBuilder != null
-      ? errorBuilder!(context, error, null)
-      : Image.asset(fallbackAsset, fit: fit),
-  );
+  Widget build(BuildContext context) {
+    if (kIsWeb) {
+      return Image.network(
+        url,
+        key: ValueKey<String>('web-image-$url'),
+        fit: fit,
+        width: double.infinity,
+        height: double.infinity,
+        gaplessPlayback: true,
+        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+          if (wasSynchronouslyLoaded || frame != null) return child;
+          return Image.asset(
+            fallbackAsset,
+            fit: fit,
+            width: double.infinity,
+            height: double.infinity,
+          );
+        },
+        errorBuilder: _fallback,
+      );
+    }
+
+    return CachedNetworkImage(
+      imageUrl: url,
+      key: ValueKey<String>('cached-image-$url'),
+      fit: fit,
+      width: double.infinity,
+      height: double.infinity,
+      fadeInDuration: const Duration(milliseconds: 120),
+      placeholder: (_, __) => Image.asset(
+        fallbackAsset,
+        fit: fit,
+        width: double.infinity,
+        height: double.infinity,
+      ),
+      errorWidget: (context, _, error) => _fallback(context, error, null),
+    );
+  }
 }
 
 void main() => runApp(const GhailDeliveryApp());
