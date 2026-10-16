@@ -3,8 +3,7 @@ name: Build Android APK
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [main]
 
 permissions:
   contents: read
@@ -39,6 +38,20 @@ jobs:
           if [ ! -f android/app/build.gradle ] && [ ! -f android/app/build.gradle.kts ]; then
             flutter create --platforms=android .
           fi
+
+      - name: Verify Android internet permission
+        run: |
+          MANIFEST=android/app/src/main/AndroidManifest.xml
+          if [ ! -f "$MANIFEST" ]; then
+            echo "ERROR: AndroidManifest.xml was not generated"
+            exit 1
+          fi
+          if ! grep -q 'android.permission.INTERNET' "$MANIFEST"; then
+            echo "ERROR: INTERNET permission missing from AndroidManifest.xml"
+            cat "$MANIFEST"
+            exit 1
+          fi
+          echo "Android INTERNET permission found"
 
       - name: Get dependencies
         run: flutter pub get

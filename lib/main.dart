@@ -22,19 +22,13 @@ class HybridImage extends StatelessWidget {
 
   Widget _fallback(BuildContext context, Object error, StackTrace? stack) {
     if (errorBuilder != null) return errorBuilder!(context, error, stack);
-    return Image.asset(
-      fallbackAsset,
-      fit: fit,
-      width: double.infinity,
-      height: double.infinity,
-      errorBuilder: (_, __, ___) => const ColoredBox(
-        color: Color(0xFFE2F4EC),
-        child: Center(
-          child: Icon(
-            Icons.image_not_supported_outlined,
-            color: Color(0xFF087F5B),
-            size: 32,
-          ),
+    return const ColoredBox(
+      color: Color(0xFFE2F4EC),
+      child: Center(
+        child: Icon(
+          Icons.image_not_supported_outlined,
+          color: Color(0xFF087F5B),
+          size: 32,
         ),
       ),
     );
@@ -42,45 +36,50 @@ class HybridImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (kIsWeb) {
-      return Image.network(
-        url,
-        key: ValueKey<String>('web-image-$url'),
-        fit: fit,
-        width: double.infinity,
-        height: double.infinity,
-        gaplessPlayback: true,
-        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-          if (wasSynchronouslyLoaded || frame != null) return child;
-          return Image.asset(
-            fallbackAsset,
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.asset(
+          fallbackAsset,
+          fit: fit,
+          errorBuilder: (_, __, ___) => const ColoredBox(
+            color: Color(0xFFE2F4EC),
+            child: Center(
+              child: Icon(
+                Icons.image_outlined,
+                color: Color(0xFF087F5B),
+                size: 32,
+              ),
+            ),
+          ),
+        ),
+        if (kIsWeb)
+          Image.network(
+            url,
             fit: fit,
-            width: double.infinity,
-            height: double.infinity,
-          );
-        },
-        errorBuilder: _fallback,
-      );
-    }
-
-    return CachedNetworkImage(
-      imageUrl: url,
-      key: ValueKey<String>('cached-image-$url'),
-      fit: fit,
-      width: double.infinity,
-      height: double.infinity,
-      fadeInDuration: const Duration(milliseconds: 120),
-      placeholder: (_, __) => Image.asset(
-        fallbackAsset,
-        fit: fit,
-        width: double.infinity,
-        height: double.infinity,
-      ),
-      errorWidget: (context, _, error) => _fallback(context, error, null),
+            gaplessPlayback: true,
+            frameBuilder: (context, child, frame, sync) {
+              if (sync || frame != null) return child;
+              return const SizedBox.shrink();
+            },
+            errorBuilder: (context, error, stack) =>
+                const SizedBox.shrink(),
+          )
+        else
+          Image.network(
+            url,
+            fit: fit,
+            errorBuilder: (context, error, stack) =>
+                const SizedBox.shrink(),
+            loadingBuilder: (context, child, progress) {
+              if (progress == null) return child;
+              return const SizedBox.shrink();
+            },
+          ),
+      ],
     );
   }
 }
-
 void main() => runApp(const GhailDeliveryApp());
 
 const brand = Color(0xFF087F5B);
@@ -552,34 +551,58 @@ class _HomeScreenState extends State<HomeScreen> {
     showModalBottomSheet(
       context: context,
       showDragHandle: true,
-      builder: (_) => Directionality(
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (sheetContext) => Directionality(
         textDirection: TextDirection.rtl,
-        child: Padding(
-          padding: const EdgeInsets.all(22),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(shop.name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Text('الوقت المتوقع: ${shop.eta}'),
-              Text('رسوم التوصيل التجريبية: ${shop.delivery.toStringAsFixed(0)} ريال يمني'),
-              const SizedBox(height: 12),
-              const Text('هذا قسم تجريبي. عند ربط قاعدة البيانات ستظهر المنتجات الحقيقية وأسعارها.'),
-              const SizedBox(height: 14),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('سنضيف قائمة المنتجات عند إعداد بيانات المحلات.')),
-                    );
-                  },
-                  child: const Text('عرض المنتجات'),
+        child: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              22,
+              8,
+              22,
+              MediaQuery.of(sheetContext).viewInsets.bottom + 24,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  shop.name,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text('الوقت المتوقع: ${shop.eta}'),
+                Text(
+                  'رسوم التوصيل التجريبية: ${shop.delivery.toStringAsFixed(0)} ريال يمني',
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'هذا قسم تجريبي. عند ربط قاعدة البيانات ستظهر المنتجات الحقيقية وأسعارها.',
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () {
+                      Navigator.pop(sheetContext);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'سنضيف قائمة المنتجات عند إعداد بيانات المحلات.',
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Text('عرض المنتجات'),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
