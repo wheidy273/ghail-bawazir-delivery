@@ -3,7 +3,11 @@ name: Build Android APK
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches:
+      - main
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -26,6 +30,17 @@ jobs:
           cache: true
 
       - name: Check Flutter project
+        run: |
+          flutter --version
+          flutter pub get
+
+      - name: Generate Android platform if missing
+        run: |
+          if [ ! -f android/app/build.gradle ] && [ ! -f android/app/build.gradle.kts ]; then
+            flutter create --platforms=android .
+          fi
+
+      - name: Get dependencies
         run: flutter pub get
 
       - name: Build APK
@@ -37,3 +52,4 @@ jobs:
           name: ghail-bawazir-delivery-apk
           path: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
           if-no-files-found: error
+          retention-days: 7
