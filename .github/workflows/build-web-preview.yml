@@ -1,0 +1,51 @@
+name: Build Web Preview
+
+on:
+workflow_dispatch:
+push:
+branches:
+- main
+
+permissions:
+contents: read
+pages: write
+id-token: write
+
+concurrency:
+group: github-pages
+cancel-in-progress: true
+
+jobs:
+build-web:
+runs-on: ubuntu-latest
+
+steps:
+  - name: Checkout source
+    uses: actions/checkout@v4
+
+  - name: Set up Flutter
+    uses: subosito/flutter-action@v2
+    with:
+      channel: stable
+      cache: true
+
+  - name: Get dependencies
+    run: flutter pub get
+
+  - name: Generate web platform if missing
+    run: |
+      if [ ! -d web ]; then
+        flutter create --platforms=web .
+      fi
+
+  - name: Build Flutter Web
+    run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
+
+  - name: Upload web artifact
+    uses: actions/upload-pages-artifact@v3
+    with:
+      path: build/web
+
+  - name: Deploy to GitHub Pages
+    id: deployment
+    uses: actions/deploy-pages@v4
